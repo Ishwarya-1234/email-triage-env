@@ -22,11 +22,8 @@ def state():
 @app.post("/step")
 def step(action: dict):
     state, reward, done, info = env.step(action)
-    return {
-        "state": state,
-        "reward": reward,
-        "done": done
-    }
+    reward = max(0.001, min(reward, 0.999))  # clamp here too!
+    return {"state": state, "reward": reward, "done": done}
 
 @app.get("/tasks")
 def get_tasks():
