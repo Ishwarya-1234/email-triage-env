@@ -1,0 +1,51 @@
+name: email-triage-env
+version: "1.0"
+description: "An RL environment where an AI agent triages emails by priority and category"
+
+observation_space:
+  email_subject: string
+  email_body: string
+  sender: string
+  task_level: string
+
+action_space:
+  priority:
+    type: categorical
+    values: [urgent, normal, low]
+  category:
+    type: categorical
+    values: [bug_report, billing, general]
+
+tasks:
+  - id: task_easy_1
+    level: easy
+    description: "Classify a critical bug report email"
+    grader: true
+  - id: task_easy_2
+    level: easy
+    description: "Classify a critical app crash report"
+    grader: true
+  - id: task_medium_1
+    level: medium
+    description: "Classify a billing inquiry email"
+    grader: true
+  - id: task_medium_2
+    level: medium
+    description: "Classify a refund request email"
+    grader: true
+  - id: task_hard_1
+    level: hard
+    description: "Classify an ambiguous follow-up email"
+    grader: true
+
+reward:
+  min: 0.001
+  max: 0.999
+  partial_credit: true
+
+api:
+  endpoints:
+    - reset()
+    - step()
+    - state()
+    - run_task()
