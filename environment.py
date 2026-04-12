@@ -115,28 +115,28 @@ class EmailTriageEnv:
         return self.state, reward, True, {}
 
     def _grade(self, action):
-        score = 0.0
-        expected = self.current_expected
+         score = 0.0
+         expected = self.current_expected
 
     # Priority grading
-        if action.get("priority") == expected.get("priority"):
-            score += 0.45
-        elif (action.get("priority") == "urgent" and expected.get("priority") == "normal") or \
-            (action.get("priority") == "normal" and expected.get("priority") == "urgent"):
-            score += 0.15
+         if action.get("priority") == expected.get("priority"):
+             score += 0.45
+         elif (action.get("priority") == "urgent" and expected.get("priority") == "normal") or \
+             (action.get("priority") == "normal" and expected.get("priority") == "urgent"):
+             score += 0.15
 
     # Category grading
-        if action.get("category") == expected.get("category"):
-            score += 0.45
-        elif action.get("category") in ["bug_report", "general"] and \
-            expected.get("category") in ["bug_report", "general"]:
-            score += 0.15
+         if action.get("category") == expected.get("category"):
+             score += 0.45
+         elif action.get("category") in ["bug_report", "general"] and \
+             expected.get("category") in ["bug_report", "general"]:
+             score += 0.15
 
     # Base score so never exactly 0.0
-            score += 0.1
+             score += 0.1
 
     # Never exactly 1.0
-            return min(score, 0.99)
+             return min(score, 0.99)
 
 
     def get_state(self):
