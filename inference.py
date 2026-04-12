@@ -2,9 +2,11 @@ import os
 from openai import OpenAI
 from environment import EmailTriageEnv
 
-# Environment variables
-API_BASE_URL = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
-MODEL_NAME = os.getenv("MODEL_NAME", "meta-llama/Llama-3.3-70B-Instruct")
+# =========================
+# Environment Variables
+# =========================
+API_BASE_URL = os.getenv("API_BASE_URL", "https://api.openai.com/v1")
+MODEL_NAME = os.getenv("MODEL_NAME", "gpt-4o-mini")
 HF_TOKEN = os.getenv("HF_TOKEN")
 
 if HF_TOKEN is None:
@@ -17,6 +19,9 @@ client = OpenAI(
 
 env = EmailTriageEnv()
 
+# =========================
+# Agent Logic
+# =========================
 def get_agent_action(state):
     prompt = f"""You are an expert email triage agent.
 
@@ -41,31 +46,67 @@ category: <value>"""
     )
 
     text = response.choices[0].message.content.strip()
-    action = {}
+
+    action = {"priority": "normal", "category": "general"}
+
     for line in text.split("\n"):
         if "priority:" in line:
             action["priority"] = line.split(":")[1].strip()
-        if "category:" in line:
+        elif "category:" in line:
             action["category"] = line.split(":")[1].strip()
+
     return action
 
+# =========================
+# Main Execution Loop
+# =========================
 levels = ["easy", "medium", "hard"]
 
 for level in levels:
     state = env.reset(level)
     task_name = f"email_triage_{level}"
-    
+
     print(f"[START] task={task_name} env=email-triage-env model={MODEL_NAME}")
-    
+
+    step = 0
+    rewards = []
+    done = False
+
     try:
-        action = get_agent_action(state)
-        _, reward, done, _ = env.step(action)
-        
-        action_str = f"triage(priority='{action.get('priority','unknown')}',category='{action.get('category','unknown')}')"
-        
-        print(f"[STEP] step=1 action={action_str} reward={reward:.2f} done={str(done).lower()} error=null")
-        print(f"[END] success={str(done).lower()} steps=1 rewards={reward:.2f}")
-        
+        while not done:
+            step += 1
+
+            action = get_agent_action(state)
+
+            state, reward, done, _ = env.step(action)
+
+            # ✅ Clamp reward between 0 and 1
+            reward = max(0.0, min(1.0, reward))
+            reward_str = f"{reward:.2f}"
+            rewards.append(reward_str)
+
+            # ✅ Safe action string (no spaces/newlines issues)
+            action_str = f"priority={action.get('priority','unknown')},category={action.get('category','unknown')}"
+
+            print(
+                f"[STEP] step={step} action={action_str} "
+                f"reward={reward_str} done={str(done).lower()} error=null"
+            )
+
+        # ✅ Close environment BEFORE END
+        env.close()
+
+        print(
+            f"[END] success=true steps={step} rewards={','.join(rewards)}"
+        )
+
     except Exception as e:
-        print(f"[STEP] step=1 action=null reward=0.00 done=false error={str(e)}")
-        print(f"[END] success=false steps=1 rewards=0.00")
+        error_msg = str(e).replace("\n", " ").replace("\r", " ")
+
+        print(
+            f"[STEP] step={step+1} action=null reward=0.00 done=false error={error_msg}"
+        )
+
+        print(
+            f"[END] success=false steps={step+1} rewards={','.join(rewards) if rewards else '0.00'}"
+        )
